@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imnovyaz School ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+                        accent: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
+                        sidebar: { DEFAULT:'#0f172a',light:'#1e293b',hover:'#334155' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .login-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .stat-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px -8px rgba(0,0,0,0.15);
+        }
+        .sidebar-item {
+            transition: all 0.2s ease;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background: rgba(59,130,246,0.15);
+            border-right: 3px solid #3b82f6;
+        }
+        .sidebar-item.active .sidebar-icon, .sidebar-item:hover .sidebar-icon {
+            color: #60a5fa;
+        }
+        .sidebar-item.active .sidebar-text, .sidebar-item:hover .sidebar-text {
+            color: #f1f5f9;
+        }
+        .modal-overlay {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.3); }
+            50% { box-shadow: 0 0 40px rgba(59,130,246,0.5); }
+        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .table-row-hover:hover { background: #f8fafc; }
+        .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Mobile sidebar */
+        .sidebar-overlay {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            transition: opacity 0.3s;
+        }
+        @media (max-width: 1023px) {
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+        }
+
+        .chart-container { position: relative; height: 280px; }
+
+        .toast {
+            animation: toastIn 0.4s ease-out, toastOut 0.4s ease-in 2.6s;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100px); }
+        }
+        input[type="file"]::file-selector-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-inter">
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-[9999] space-y-3"></div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-bg min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8 fade-in">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 border border-white/20 mb-4 pulse-glow">
+                    <i data-lucide="graduation-cap" class="w-10 h-10 text-blue-400"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Imnovyaz School ERP</h1>
+                <p class="text-blue-200 mt-2 text-sm">Complete School Management Solution</p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-8 fade-in">
+                <h2 class="text-xl font-semibold text-white mb-6">Sign In</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-blue-200 text-sm mb-1.5 font-medium">Login As</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setRole('admin')" id="roleAdmin" class="role-btn px-3 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-500/20 text-blue-300 border border-blue-400/30 hover:bg-blue-500/30">Admin</button>
+                            <button onclick="setRole('teacher')" id="roleTeacher" class="role-btn px-3 py-2.5 rounded-xl text-sm font-medium transition-all bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Teacher</button>
+                            <button onclick="setRole('parent')" id="roleParent" class="role-btn px-3 py-2.5 rounded-xl text-sm font-medium transition-all bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10">Parent</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-blue-200 text-sm mb-1.5 font-medium">Email</label>
+                        <div class="relative">
+                            <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input id="loginEmail" type="email" placeholder="admin@imnovyaz.com" class="w-full bg-white/10 border border-white/15 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/50 focus:bg-white/15 transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-blue-200 text-sm mb-1.5 font-medium">Password</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input id="loginPassword" type="password" placeholder="••••••••" class="w-full bg-white/10 border border-white/15 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/50 focus:bg-white/15 transition-all">
+                        </div>
+                    </div>
+
+                    <button onclick="handleLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        Sign In
+                    </button>
+                </div>
+
+                <div class="mt-5 pt-5 border-t border-white/10">
+                    <p class="text-gray-500 text-xs text-center">Demo Credentials</p>
+                    <div class="mt-2 space-y-1">
+                        <p class="text-gray-400 text-xs text-center">Admin: admin@imnovyaz.com / admin123</p>
+                        <p class="text-gray-400 text-xs text-center">Teacher: teacher@imnovyaz.com / teacher123</p>
+                        <p class="text-gray-400 text-xs text-center">Parent: parent@imnovyaz.com / parent123</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-center text-blue-300/50 text-xs mt-6">&copy; 2024 Imnovyaz School ERP. All rights reserved.</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="appScreen" class="hidden min-h-screen flex">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar fixed left-0 top-0 bottom-0 w-64 bg-sidebar z-50 flex flex-col overflow-y-auto lg:translate-x-0">
+            <!-- Logo Section -->
+            <div class="p-5 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-400/30">
+                        <i data-lucide="graduation-cap" class="w-5 h-5 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-white font-bold text-sm tracking-tight">Imnovyaz</h1>
+                        <p class="text-blue-300/60 text-[10px] font-medium uppercase tracking-wider">School ERP</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav id="sidebarNav" class="flex-1 py-4 px-3 space-y-1"></nav>
+
+            <!-- User Section -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center gap-3">
+                    <div id="sidebarAvatar" class="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm font-semibold"></div>
+                    <div class="flex-1 min-w-0">
+                        <p id="sidebarUserName" class="text-white text-sm font-medium truncate"></p>
+                        <p id="sidebarUserRole" class="text-blue-300/60 text-[11px] capitalize"></p>
+                    </div>
+                    <button onclick="handleLogout()" class="text-gray-500 hover:text-red-400 transition-colors" title="Logout">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 lg:ml-64">
+            <!-- Top Header -->
+            <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+                <div class="flex items-center justify-between px-4 lg:px-6 h-16">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i data-lucide="menu" class="w-5 h-5 text-gray-600"></i>
+                        </button>
+                        <div>
+                            <h2 id="pageTitle" class="text-lg font-semibold text-gray-800"></h2>
+                            <p id="pageSubtitle" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="relative hidden sm:block">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input id="globalSearch" type="text" placeholder="Search..." class="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-300 focus:bg-white transition-all w-48 lg:w-64" onkeyup="handleGlobalSearch(this.value)">
+                        </div>
+                        <button class="relative p-2 rounded-xl hover:bg-gray-100 transition-colors" onclick="showToast('No new notifications','info')">
+                            <i data-lucide="bell" class="w-5 h-5 text-gray-600"></i>
+                            <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                        </button>
+                        <div class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-semibold cursor-pointer" id="headerAvatar" onclick="showToast('Profile settings coming soon','info')"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main id="mainContent" class="p-4 lg:p-6"></main>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="studentModal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl fade-in">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-800">Add Student</h3>
+                <button onclick="closeStudentModal()" class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="studentForm" onsubmit="handleStudentSubmit(event)">
+                    <input type="hidden" id="studentId">
+                    <!-- Photo Upload -->
+                    <div class="mb-6 flex items-center gap-4">
+                        <div id="photoPreview" class="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
+                            <i data-lucide="camera" class="w-6 h-6 text-gray-400"></i>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Student Photo</label>
+                            <input type="file" id="studentPhoto" accept="image/*" onchange="previewPhoto(this)" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG up to 2MB</p>
+                        </div>
+                    </div>
+                    <!-- Personal Info -->
+                    <div class="mb-5">
+                        <h4 class="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Personal Information</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                                <input type="text" id="fullName" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Enter full name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                                <input type="date" id="dob" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                                <select id="gender" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
+                                <select id="bloodGroup" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white">
+                                    <option value="">Select Blood Group</option>
+                                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                                    <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Admission No. *</label>
+                                <input type="text" id="admissionNo" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-gray-50" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Class Info -->
+                    <div class="mb-5">
+                        <h4 class="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Academic Information</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Class *</label>
+                                <select id="class" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white">
+                                    <option value="">Select Class</option>
+                                    <option>Nursery</option><option>LKG</option><option>UKG</option>
+                                    <option>Class 1</option><option>Class 2</option><option>Class 3</option>
+                                    <option>Class 4</option><option>Class 5</option><option>Class 6</option>
+                                    <option>Class 7</option><option>Class 8</option><option>Class 9</option>
+                                    <option>Class 10</option><option>Class 11</option><option>Class 12</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                                <select id="section" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white">
+                                    <option value="">Select Section</option>
+                                    <option>A</option><option>B</option><option>C</option><option>D</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                <textarea id="address" rows="2" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all resize-none" placeholder="Enter address"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Parent Info -->
+                    <div class="mb-6">
+                        <h4 class="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">Parent Information</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Father's Name *</label>
+                                <input type="text" id="fatherName" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Enter father's name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
+                                <input type="text" id="motherName" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Enter mother's name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number *</label>
+                                <input type="tel" id="contactNumber" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Enter contact number">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Alternate Contact</label>
+                                <input type="tel" id="altContact" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Alternate number">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
+                                <input type="email" id="parentEmail" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="parent@email.com">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end pt-4 border-t border-gray-100">
+                        <button type="button" onclick="closeStudentModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                        <button type="submit" class="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-blue-500/25">Save Student</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Student Profile Modal -->
+    <div id="viewStudentModal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl fade-in">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 class="text-lg font-semibold text-gray-800">Student Profile</h3>
+                <button onclick="closeViewModal()" class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+            <div id="studentProfileContent" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- Report Card Editor Modal -->
+    <div id="reportCardModal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl fade-in">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 class="text-lg font-semibold text-gray-800">Edit Report Card</h3>
+                <button onclick="closeReportCardModal()" class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+            <div id="reportCardEditorContent" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- Exam Modal -->
+    <div id="examModal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl fade-in">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 class="text-lg font-semibold text-gray-800">Add Exam</h3>
+                <button onclick="closeExamModal()" class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
+            </div>
+            <div id="examModalContent" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl fade-in p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete Student?</h3>
+            <p class="text-sm text-gray-500 mb-6">This action cannot be undone. All data associated with this student will be permanently removed.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeDeleteModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button onclick="confirmDelete()" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-red-500/25">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
